@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+KERNEL_NAME="QuartiX"
+GKI_VERSION="android12-5.10"
+USER="eraselk"
+HOST="gacorprjkt"
+TIMEZONE="Asia/Makassar"
+ANYKERNEL_REPO="https://github.com/linastorvaldz/anykernel"
+ANYKERNEL_BRANCH="gki"
+KERNEL_REPO="https://github.com/linastorvaldz/kernel_new"
+KERNEL_BRANCH="android12-5.10"
+KERNEL_DEFCONFIG="gki_defconfig"
+GKI_RELEASES_REPO="https://github.com/linastorvaldz/quartix-releases"
+CLANG_URL="$(./clang.sh aosp)"
+ZIP_NAME="$KERNEL_NAME-KVER-VARIANT-BUILD_DATE.zip"
