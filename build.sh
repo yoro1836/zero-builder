@@ -146,9 +146,9 @@ if [[ $KSU == "Suki" ]]; then
   config --enable CONFIG_KPM
 fi
 # Disable SuSFS Logging
-if [[ $KSU_SUSFS == "true" ]]; then
-  config --disable CONFIG_KSU_SUSFS_ENABLE_LOG
-fi
+#if [[ $KSU_SUSFS == "true" ]]; then
+#  config --disable CONFIG_KSU_SUSFS_ENABLE_LOG
+#fi
 
 # Declare needed variables
 export KBUILD_BUILD_USER="$USER"
