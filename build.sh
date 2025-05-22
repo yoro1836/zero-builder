@@ -93,7 +93,7 @@ if [[ $KSU != "None" ]]; then
   log "Installing KernelSU..."
   case "$KSU" in
     "Official") install_ksu tiann/KernelSU ;;
-    "Next") install_ksu rifsxd/KernelSU-Next $([[ $KSU_SUSFS == true ]] && echo next-susfs) ;;
+    "Next") install_ksu rifsxd/KernelSU-Next $([[ $KSU_SUSFS == true ]] && echo next-susfs-dev) ;;
     "Suki") install_ksu ShirkNeko/SukiSU-Ultra $([[ $KSU_SUSFS == true ]] && echo susfs-dev) ;;
     *) error "Invalid KSU value: $KSU" ;;
   esac
