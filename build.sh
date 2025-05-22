@@ -134,6 +134,11 @@ if [[ $KSU_SUSFS == "true" ]]; then
     patch -p1 < $SUSFS_PATCHES/KernelSU/10_enable_susfs_for_ksu.patch || error "Failed to apply KernelSU-side susfs patch"
     cd -
   fi
+  
+  # Temporary fixes
+  if ! grep -q 'CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS' include/linux/susfs_def.h; then
+    patch -p1 < <(curl -s https://raw.githubusercontent.com/SomeEmptyBox/android_eqe/refs/heads/main/susfs_backport.patch) || error "Failed to apply additional patch for SUSFS"
+  fi
 fi
 
 # set localversion
