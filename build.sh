@@ -103,6 +103,7 @@ fi
 if [[ $KSU_MANUAL_HOOK == "true" ]]; then
   config --enable CONFIG_KSU_MANUAL_HOOK
   config --disable CONFIG_KSU_WITH_KPROBE
+  config --disable CONFIG_KSU_KPROBES_HOOK
   config --disable CONFIG_KSU_SUSFS_SUS_SU
 
   log "Applying ksu manual-hook patch...."
