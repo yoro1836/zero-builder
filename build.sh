@@ -34,7 +34,7 @@ declare -A KSU_VARIANTS=(
   ["Suki"]="SUKISU"
 )
 VARIANT="${KSU_VARIANTS[$KSU]:-NKSU}"
-[[ $KSU_SUSFS == "true" ]] && VARIANT+="xSUSFS"
+[[ $KSU_SUSFS == "true" ]] && VARIANT+="+SUSFS"
 
 # Replace Placeholder in zip name
 ZIP_NAME=${ZIP_NAME//KVER/$LINUX_VERSION}
@@ -138,7 +138,7 @@ if [[ $KSU_SUSFS == "true" ]]; then
 
   # Temporary fixes
   if ! grep -q 'CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS' include/linux/susfs_def.h; then
-    patch -p1 < <(curl -s https://raw.githubusercontent.com/SomeEmptyBox/android_eqe/refs/heads/main/susfs_backport.patch) || error "Failed to apply additional patch for SUSFS"
+    patch -p1 < <(curl -s https://raw.githubusercontent.com/SomeEmptyBox/android_eqe/refs/heads/main/patches/susfs_backport.patch) || error "Failed to apply additional patch for SUSFS"
   fi
 fi
 
