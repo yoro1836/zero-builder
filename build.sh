@@ -121,7 +121,7 @@ fi
 # SUSFS for KSU setup
 if [[ $KSU_SUSFS == "true" ]]; then
   log "Cloning susfs4ksu..."
-  git clone -q --depth=1 https://gitlab.com/simonpunk/susfs4ksu -b gki-$GKI_VERSION $workdir/susfs4ksu
+  git clone -q --depth=1 "$SUSFS_REPO"  -b "$SUSFS_BRANCH" "$workdir/susfs4ksu"
   SUSFS_PATCHES="$workdir/susfs4ksu/kernel_patches"
 
   # Copy susfs files (Kernel Side)

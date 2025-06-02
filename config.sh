@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 KERNEL_NAME="QuartiX"
-GKI_VERSION="android12-5.10"
+SUSFS_REPO="https://gitlab.com/simonpunk/susfs4ksu"
+SUSFS_BRANCH="gki-android12-5.10"
 USER="eraselk"
 HOST="gacorprjkt"
 TIMEZONE="Asia/Makassar"
