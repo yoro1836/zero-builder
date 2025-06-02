@@ -43,6 +43,7 @@ ZIP_NAME=${ZIP_NAME//VARIANT/$VARIANT}
 # Download Clang
 CLANG_PATH="$workdir/clang"
 
+if [[ -z "$CLANG_BRANCH" ]]; then
 log "🔽 Downloading Clang..."
 mkdir -p "$CLANG_PATH"
 wget -qO clang-tarball "$CLANG_URL" || error "Failed to download Clang."
@@ -55,8 +56,13 @@ if [[ $(find "$CLANG_PATH" -mindepth 1 -maxdepth 1 -type d | wc -l) -eq 1 ]] \
   mv "$single_dir"/* "$CLANG_PATH"/
   rm -rf "$single_dir"
 fi
+else
+log "🔽 Cloning Clang..."
+git clone --depth=1 -q "$CLANG_URL" -b "$CLANG_BRANCH" "$CLANG_PATH" || error "Failed to clone clang"
+fi
 
 export PATH="$CLANG_PATH/bin:$PATH"
+
 # Extract clang version
 COMPILER_STRING=$(clang -v 2>&1 | head -n 1 | sed 's/(https..*//' | sed 's/ version//')
 
