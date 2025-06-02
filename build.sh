@@ -77,10 +77,10 @@ fi
 
 cd $workdir/ksrc
 # Apply LineageOS maphide patch
-#log "Applying LineageOS maphide patch..."
-#if ! patch -p1 < $workdir/wildplus_patches/69_hide_stuff.patch; then
-#  error "Failed to apply LineageOS maphide patch"
-#fi
+log "Applying LineageOS maphide patch..."
+if ! patch -p1 < $workdir/wildplus_patches/69_hide_stuff.patch; then
+  error "Failed to apply LineageOS maphide patch"
+fi
 
 ## KernelSU setup
 if [[ $KSU != "None" ]]; then
