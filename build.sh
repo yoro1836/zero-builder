@@ -44,21 +44,21 @@ ZIP_NAME=${ZIP_NAME//VARIANT/$VARIANT}
 CLANG_PATH="$workdir/clang"
 
 if [[ -z "$CLANG_BRANCH" ]]; then
-log "🔽 Downloading Clang..."
-mkdir -p "$CLANG_PATH"
-wget -qO clang-tarball "$CLANG_URL" || error "Failed to download Clang."
-tar -xf clang-tarball -C "$CLANG_PATH/" || error "Failed to extract Clang."
-rm -f clang-tarball
+  log "🔽 Downloading Clang..."
+  mkdir -p "$CLANG_PATH"
+  wget -qO clang-tarball "$CLANG_URL" || error "Failed to download Clang."
+  tar -xf clang-tarball -C "$CLANG_PATH/" || error "Failed to extract Clang."
+  rm -f clang-tarball
 
-if [[ $(find "$CLANG_PATH" -mindepth 1 -maxdepth 1 -type d | wc -l) -eq 1 ]] \
-  && [[ $(find "$CLANG_PATH" -mindepth 1 -maxdepth 1 -type f | wc -l) -eq 0 ]]; then
-  single_dir=$(find "$CLANG_PATH" -mindepth 1 -maxdepth 1 -type d)
-  mv "$single_dir"/* "$CLANG_PATH"/
-  rm -rf "$single_dir"
-fi
+  if [[ $(find "$CLANG_PATH" -mindepth 1 -maxdepth 1 -type d | wc -l) -eq 1 ]] \
+    && [[ $(find "$CLANG_PATH" -mindepth 1 -maxdepth 1 -type f | wc -l) -eq 0 ]]; then
+    single_dir=$(find "$CLANG_PATH" -mindepth 1 -maxdepth 1 -type d)
+    mv "$single_dir"/* "$CLANG_PATH"/
+    rm -rf "$single_dir"
+  fi
 else
-log "🔽 Cloning Clang..."
-git clone --depth=1 -q "$CLANG_URL" -b "$CLANG_BRANCH" "$CLANG_PATH" || error "Failed to clone clang"
+  log "🔽 Cloning Clang..."
+  git clone --depth=1 -q "$CLANG_URL" -b "$CLANG_BRANCH" "$CLANG_PATH" || error "Failed to clone clang"
 fi
 
 export PATH="$CLANG_PATH/bin:$PATH"
@@ -121,7 +121,7 @@ fi
 # SUSFS for KSU setup
 if [[ $KSU_SUSFS == "true" ]]; then
   log "Cloning susfs4ksu..."
-  git clone -q --depth=1 "$SUSFS_REPO"  -b "$SUSFS_BRANCH" "$workdir/susfs4ksu"
+  git clone -q --depth=1 "$SUSFS_REPO" -b "$SUSFS_BRANCH" "$workdir/susfs4ksu"
   SUSFS_PATCHES="$workdir/susfs4ksu/kernel_patches"
 
   # Copy susfs files (Kernel Side)
