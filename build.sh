@@ -121,8 +121,8 @@ fi
 # SUSFS for KSU setup
 if [[ $KSU_SUSFS == "true" ]]; then
   log "Cloning susfs4ksu..."
-  git clone -q --depth=1 "$SUSFS_REPO" -b "$SUSFS_BRANCH" "$workdir/susfs4ksu"
-  SUSFS_PATCHES="$workdir/susfs4ksu/kernel_patches"
+  git clone --depth=1 $SUSFS_REPO -b $SUSFS_BRANCH $workdir/susfs4ksu || error "Failed to clone SuSFS Patches"
+  SUSFS_PATCHES=$workdir/susfs4ksu/kernel_patches
 
   # Copy susfs files (Kernel Side)
   log "Copying susfs files..."
@@ -132,7 +132,7 @@ if [[ $KSU_SUSFS == "true" ]]; then
 
   # Apply kernel-side susfs patch
   log "Applying kernel-side susfs patch"
-  patch -p1 < "$SUSFS_PATCHES/50_add_susfs_in_gki-$GKI_VERSION.patch" || error "Failed to apply kernel-side susfs patch"
+  patch -p1 < "$SUSFS_PATCHES/50_add_susfs_in_${SUSFS_BRANCH}.patch" || error "Failed to apply kernel-side susfs patch"
 
   # Apply patch to KernelSU (KSU Side)
   if [[ $KSU == "Official" ]]; then
