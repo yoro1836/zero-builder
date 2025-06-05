@@ -1,19 +1,18 @@
 #!/usr/bin/env bash
 workdir=$(pwd)
+
+# Write output logs into build.log file
 exec > >(tee $workdir/build.log) 2>&1
 
 # Import config and functions
 source $workdir/config.sh
 source $workdir/functions.sh
 
-# Set up timezone
+# Set timezone
 sudo timedatectl set-timezone "$TIMEZONE"
 
 # Clone kernel patches
-WILDPLUS_PATCHES=https://github.com/WildPlusKernel/kernel_patches
 SHIRKNEKO_PATCHES=https://github.com/ShirkNeko/SukiSU_patch
-log "Cloning kernel patches from $(simplify_gh_url "$WILDPLUS_PATCHES")"
-git clone -q --depth=1 $WILDPLUS_PATCHES wildplus_patches
 log "Cloning kernel patches from $(simplify_gh_url "$SHIRKNEKO_PATCHES")"
 git clone -q --depth=1 $SHIRKNEKO_PATCHES shirkneko_patches
 
@@ -26,49 +25,49 @@ LINUX_VERSION=$(make kernelversion)
 DEFCONFIG_FILE=$(find $workdir/ksrc/arch/arm64/configs -name "$KERNEL_DEFCONFIG")
 cd $workdir
 
-# Set KernelSU variant
+# Set KernelSU Variant
 log "Setting KernelSU variant..."
-declare -A KSU_VARIANTS=(
-  ["Official"]="KSU"
-  ["Next"]="KSUN"
-  ["Suki"]="SUKISU"
-)
-VARIANT="${KSU_VARIANTS[$KSU]:-NKSU}"
-[[ $KSU_SUSFS == "true" ]] && VARIANT+="+SUSFS"
+case "$KSU" in
+  "Next") VARIANT="KSUN" ;;
+  "Suki") VARIANT="SUKISU" ;;
+  "None") VARIANT="NKSU" ;;
+  *) error "Invalid KernelSU Variant '$KSU'" ;;
+esac
+[[ $KSU_SUSFS == "true" ]] && VARIANT+="+SuSFS"
 
 # Replace Placeholder in zip name
 ZIP_NAME=${ZIP_NAME//KVER/$LINUX_VERSION}
 ZIP_NAME=${ZIP_NAME//VARIANT/$VARIANT}
 
 # Download Clang
-CLANG_PATH="$workdir/clang"
-
+CLANG_DIR="$workdir/clang"
 if [[ -z "$CLANG_BRANCH" ]]; then
   log "🔽 Downloading Clang..."
-  mkdir -p "$CLANG_PATH"
-  wget -qO clang-tarball "$CLANG_URL" || error "Failed to download Clang."
-  tar -xf clang-tarball -C "$CLANG_PATH/" || error "Failed to extract Clang."
-  rm -f clang-tarball
+  wget -q "$CLANG_URL" -O tarball || error "Failed to download Clang."
+  mkdir -p "$CLANG_DIR"
+  tar -xf tarball -C "$CLANG_DIR" || error "Failed to extract Clang."
+  rm -f tarball
 
-  if [[ $(find "$CLANG_PATH" -mindepth 1 -maxdepth 1 -type d | wc -l) -eq 1 ]] \
-    && [[ $(find "$CLANG_PATH" -mindepth 1 -maxdepth 1 -type f | wc -l) -eq 0 ]]; then
-    single_dir=$(find "$CLANG_PATH" -mindepth 1 -maxdepth 1 -type d)
-    mv "$single_dir"/* "$CLANG_PATH"/
-    rm -rf "$single_dir"
+  if [[ $(find "$CLANG_DIR" -mindepth 1 -maxdepth 1 -type d | wc -l) -eq 1 ]] \
+    && [[ $(find "$CLANG_DIR" -mindepth 1 -maxdepth 1 -type f | wc -l) -eq 0 ]]; then
+    SINGLE_DIR=$(find "$CLANG_DIR" -mindepth 1 -maxdepth 1 -type d)
+    mv -f $SINGLE_DIR/* $CLANG_RIR/
+    rm -rf $SINGLE_DIR
   fi
 else
   log "🔽 Cloning Clang..."
-  git clone --depth=1 -q "$CLANG_URL" -b "$CLANG_BRANCH" "$CLANG_PATH" || error "Failed to clone clang"
+  git clone --depth=1 -q "$CLANG_URL" -b "$CLANG_BRANCH" "$CLANG_DIR" || error "Failed to clone clang"
 fi
 
-export PATH="$CLANG_PATH/bin:$PATH"
+export PATH="$CLANG_DIR/bin:$PATH"
 
 # Extract clang version
 COMPILER_STRING=$(clang -v 2>&1 | head -n 1 | sed 's/(https..*//' | sed 's/ version//')
 
-# Clone GCC
-if ! ls $CLANG_PATH/bin | grep -q "aarch64-linux-gnu"; then
-  git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-gnu-9.3 $workdir/gcc
+# Clone GCC if not available
+if ! ls $CLANG_DIR/bin | grep -q "aarch64-linux-gnu"; then
+  log "🔽 Cloning GCC..."
+  git clone --depth=1 -q https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-gnu-9.3 $workdir/gcc
   export PATH="$workdir/gcc/bin:$PATH"
   CROSS_COMPILE_PREFIX="aarch64-linux-"
 else
@@ -76,83 +75,57 @@ else
 fi
 
 cd $workdir/ksrc
-# Apply LineageOS maphide patch
-log "Applying LineageOS maphide patch..."
-if ! patch -p1 < $workdir/wildplus_patches/69_hide_stuff.patch; then
-  error "Failed to apply LineageOS maphide patch"
-fi
 
 ## KernelSU setup
-if [[ $KSU != "None" ]]; then
-  for ksupath in "drivers/staging/kernelsu" "drivers/kernelsu" "KernelSU"; do
-    if [[ -d $ksupath ]]; then
-      log "KernelSU driver found in $ksupath, Removing..."
-      parent_dir="$(dirname $ksupath)"
+if ksu_included; then
+  for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU; do
+    if [[ -d $KSU_PATH ]]; then
+      log "KernelSU driver found in $KSU_PATH, Removing..."
+      KSU_DIR=$(dirname "$KSU_PATH")
 
-      [[ -f "$parent_dir/Kconfig" ]] && sed -i '/kernelsu/d' "$parent_dir/Kconfig"
-      [[ -f "$parent_dir/Makefile" ]] && sed -i '/kernelsu/d' "$parent_dir/Makefile"
+      [[ -f "$KSU_DIR/Kconfig" ]] && sed -i '/kernelsu/d' $KSU_DIR/Kconfig
+      [[ -f "$KSU_DIR/Makefile" ]] && sed -i '/kernelsu/d' $KSU_DIR/Makefile
 
-      rm -rf $ksupath
+      rm -rf $KSU_PATH
     fi
   done
 
   log "Installing KernelSU..."
   case "$KSU" in
-    "Official") install_ksu tiann/KernelSU ;;
-    "Next") install_ksu rifsxd/KernelSU-Next $([[ $KSU_SUSFS == true ]] && echo next-susfs-dev) ;;
-    "Suki") install_ksu ShirkNeko/SukiSU-Ultra $([[ $KSU_SUSFS == true ]] && echo susfs-dev) ;;
-    *) error "Invalid KSU value: $KSU" ;;
+    "Next") install_ksu KernelSU-Next/KernelSU-Next $(susfs_included && echo next-susfs-dev) ;;
+    "Suki") install_ksu SukiSU-Ultra/SukiSU-Ultra $(susfs_included && echo susfs-dev) ;;
   esac
 fi
 
-# Apply ksu manual hook patch
+# KSU Manual Hooks
 if [[ $KSU_MANUAL_HOOK == "true" ]]; then
   config --enable CONFIG_KSU_MANUAL_HOOK
   config --disable CONFIG_KSU_WITH_KPROBE
+  config --disable CONFIG_KSU_WITH_KPROBES
   config --disable CONFIG_KSU_KPROBES_HOOK
   config --disable CONFIG_KSU_SUSFS_SUS_SU
-
-  log "Applying ksu manual-hook patch...."
-  if ! patch -p1 < "$workdir/wildplus_patches/next/syscall_hooks.patch"; then
-    error "Failed to apply ksu manual-hook patch"
-  fi
 fi
 
-# SUSFS for KSU setup
+# SUSFS
 if [[ $KSU_SUSFS == "true" ]]; then
-  log "Cloning susfs4ksu..."
-  git clone --depth=1 $SUSFS_REPO -b $SUSFS_BRANCH $workdir/susfs4ksu || error "Failed to clone SuSFS Patches"
-  SUSFS_PATCHES=$workdir/susfs4ksu/kernel_patches
-
-  # Copy susfs files (Kernel Side)
-  log "Copying susfs files..."
-  cp $SUSFS_PATCHES/include/linux/* ./include/linux/
-  cp $SUSFS_PATCHES/fs/* ./fs/
-  SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
-
-  # Apply kernel-side susfs patch
-  log "Applying kernel-side susfs patch"
-  patch -p1 < "$SUSFS_PATCHES/50_add_susfs_in_${SUSFS_BRANCH}.patch" || error "Failed to apply kernel-side susfs patch"
-
-  # Apply patch to KernelSU (KSU Side)
-  if [[ $KSU == "Official" ]]; then
-    cd KernelSU
-    log "Applying KernelSU-side susfs patch"
-    patch -p1 < $SUSFS_PATCHES/KernelSU/10_enable_susfs_for_ksu.patch || error "Failed to apply KernelSU-side susfs patch"
-    cd -
-  fi
-
-  # Temporary fixes
-  if ! grep -q 'CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS' include/linux/susfs_def.h; then
-    patch -p1 < <(curl -s https://raw.githubusercontent.com/SomeEmptyBox/android_eqe/refs/heads/main/patches/susfs_backport.patch) || error "Failed to apply additional patch for SUSFS"
+  SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g' 2> /dev/null)
+  if [[ -z "$SUSFS_VERSION" ]]; then
+    error "Your Kernel doesn't support SuSFS!"
+  else
+    config --enable CONFIG_KSU_SUSFS
   fi
 fi
 
 # set localversion
 if [[ $TODO == "kernel" ]]; then
-  COMMIT_HASH=$(git rev-parse --short HEAD)
-  config --set-str CONFIG_LOCALVERSION "-$KERNEL_NAME/$COMMIT_HASH"
+  if [[ $STATUS == "BETA" ]]; then
+    SUFFIX=$(git rev-parse --short HEAD)
+  else
+    SUFFIX="release"
+  fi
+  config --set-str CONFIG_LOCALVERSION "-$KERNEL_NAME/$SUFFIX"
 fi
+
 # Enable KPM Supports for SukiSU
 if [[ $KSU == "Suki" ]]; then
   config --enable CONFIG_KPM
@@ -165,34 +138,26 @@ export KBUILD_BUILD_TIMESTAMP=$(date)
 
 text=$(
   cat << EOF
-*=== $KERNEL_NAME CI ===*
-🐧 *Linux Version*: \`$LINUX_VERSION\`
-🔍 *Build Status*: \`$STATUS\`
-📅 *Build Date*: \`$KBUILD_BUILD_TIMESTAMP\`
-🔥 *KSU*: \`${KSU}$([[ $KSU != "None" ]] && echo " | $KSU_VERSION")\`
-ඞ *SUSFS*: \`$([[ $KSU_SUSFS == "true" ]] && echo "$SUSFS_VERSION" || echo "None")\`
-🔰 *Compiler*: \`$COMPILER_STRING\`
+*==== Krenol CI ====*
+🐧 *Linux Version*: $LINUX_VERSION
+📅 *Build Date*: $KBUILD_BUILD_TIMESTAMP
+📛 *KernelSU*: ${KSU}$(ksu_included && echo " | $KSU_VERSION")
+ඞ *SuSFS*: $(susfs_included && echo "$SUSFS_VERSION" || echo "None")
+🔰 *Compiler*: $COMPILER_STRING
 EOF
 )
 
 MESSAGE_ID=$(send_msg "$text" 2>&1 | jq -r .result.message_id)
 
-# Define make args
-MAKE_ARGS="
--j$(nproc --all)
-ARCH=arm64
-LLVM=1
-LLVM_IAS=1
-O=out
-CROSS_COMPILE=$CROSS_COMPILE_PREFIX
-"
-KERNEL_IMAGE=$workdir/ksrc/out/arch/arm64/boot/Image
+# Define build flags and kernel image
+BUILD_FLAGS="-j$(nproc --all) ARCH=arm64 LLVM=1 LLVM_IAS=1 O=out CROSS_COMPILE=$CROSS_COMPILE_PREFIX"
+KERNEL_IMAGE="$workdir/ksrc/out/arch/arm64/boot/Image"
 
 ## Build GKI
 set +e
 
 log "Generating config..."
-make $MAKE_ARGS $KERNEL_DEFCONFIG
+make $BUILD_FLAGS $KERNEL_DEFCONFIG
 
 # Upload config file
 if [[ $TODO == "defconfig" ]]; then
@@ -203,12 +168,12 @@ fi
 
 # Build the actual kernel
 log "Building kernel..."
-make $MAKE_ARGS Image
+make $BUILD_FLAGS Image
 retVal=${PIPESTATUS[0]}
 
 set -e
 
-if [[ ! -f $KERNEL_IMAGE ]] || [[ $retVal -ne 0 ]]; then
+if [[ ! -f $KERNEL_IMAGE ]] || [[ $retVal -gt 0 ]]; then
   error "Build Failed!"
 fi
 
@@ -335,12 +300,10 @@ fi
 if [[ $LAST_BUILD == "true" && $STATUS != "BETA" ]]; then
   (
     echo "LINUX_VERSION=$LINUX_VERSION"
-    echo "SUSFS_VERSION=$(curl -s https://gitlab.com/simonpunk/susfs4ksu/-/raw/gki-${GKI_VERSION}/kernel_patches/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g')"
-    echo "KSU_OFC_VERSION=$(gh api repos/tiann/KernelSU/tags --jq '.[0].name')"
-    echo "KSU_NEXT_VERSION=$(gh api repos/rifsxd/KernelSU-Next/tags --jq '.[0].name')"
-    echo "SUKISU_VERSION=$(gh api repos/ShirkNeko/SukiSU-Ultra/tags --jq '.[0].name')"
+    echo "SUSFS_VERSION=$(curl -s https://gitlab.com/simonpunk/susfs4ksu/-/raw/${SUSFS_BRANCH}/kernel_patches/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g')"
+    echo "KSU_NEXT_VERSION=$(gh api repos/KernelSU-Next/KernelSU-Next/tags --jq '.[0].name')"
+    echo "SUKISU_VERSION=$(gh api repos/SukiSU-Ultra/SukiSU-Ultra/tags --jq '.[0].name')"
     echo "KERNEL_NAME=$KERNEL_NAME"
-    echo "GKI_VERSION=$GKI_VERSION"
     echo "RELEASE_REPO=$(simplify_gh_url "$GKI_RELEASES_REPO")"
   ) >> $workdir/artifacts/info.txt
 fi

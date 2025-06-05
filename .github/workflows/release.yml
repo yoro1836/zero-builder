@@ -9,10 +9,9 @@ jobs:
       matrix:
         variant:
           - { name: "NKSU", KSU: "None", KSU_SUSFS: "false", KSU_MANUAL_HOOK: "false", LAST_BUILD: "false" }
-          - { name: "KSU", KSU: "Official", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "false", LAST_BUILD: "false" }
           - { name: "KSUN", KSU: "Next", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "true", LAST_BUILD: "false" }
           - { name: "SUKISU", KSU: "Suki", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "true", LAST_BUILD: "true" }
-    name: Build ${{ matrix.variant.name }}
+    name: Build ${{ matrix.variant.name }} variant
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
@@ -25,7 +24,7 @@ jobs:
 
   release:
     name: Create Unified Release
-    needs: build  # Waits for all build jobs to be complete
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout current repo
@@ -38,16 +37,15 @@ jobs:
         with:
           path: release_files
 
-      - name: List Downloaded Files
-        run: ls -R release_files/
-
       - name: Extract variables from info.txt
         env:
             TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
             TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
           set -e  # Exit on error
+          source functions.sh # We need error() function
           info_file="release_files/info-${{ github.run_number }}/info.txt"
+
           if [[ -f "$info_file" ]]; then
             while IFS='=' read -r key value; do
               key=$(echo -n "$key" | tr -d ' ')
@@ -60,41 +58,40 @@ jobs:
             error "error: info.txt not found!"
           fi
 
-      # Get the Latest Tag from GitHub
-      - name: Generate and create new tag
+      - name: Generate release tag
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-            # Fetch latest tag from release repo
-            TAG="$(gh api repos/$RELEASE_REPO/tags --jq '.[0].name')"
-            if ! echo "$TAG" | grep -q "$KERNEL_NAME"; then
-                TAG="$KERNEL_NAME-r0"
+            LATEST_TAG="$(gh api repos/$RELEASE_REPO/tags --jq '.[0].name')"
+
+            # Handle case when $LATEST_TAG doesn't contain $KERNEL_NAME
+            if ! echo "$LATEST_TAG" | grep -q "$KERNEL_NAME"; then
+                RELEASE_TAG="$KERNEL_NAME-r0"
             fi
 
-            RELEASE_TAG="$(echo "$TAG" | awk -F'-r' '{suffix=$2; if (!suffix) suffix=0; suffix++; printf "%s-r%d", $1, suffix}')"
+            RELEASE_TAG="$(echo "$RELEASE_TAG" | awk -F'-r' '{suffix=$2; if (!suffix) suffix=0; suffix++; printf "%s-r%d", $1, suffix}')"
 
             echo "Release tag: $RELEASE_TAG"
             echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
 
-      - name: Upload All Builds to GKI Release Repo
+      - name: Upload All Builds to release repo
         uses: softprops/action-gh-release@v2
         with:
           repository: ${{ env.RELEASE_REPO }}
-          name: ${{ env.RELEASE_TAG }}
+          name: "🔥 ${{ env.RELEASE_TAG }}"
           tag_name: ${{ env.RELEASE_TAG }}
           prerelease: true
           files: release_files/**/*
           body: |
-            ## 📢 ${{ env.RELEASE_TAG }} Build
-            -> Linux ${{ env.LINUX_VERSION }}
+            ## 📢 ${{ env.RELEASE_TAG }} Builds
+            -> Linux ${{ env.LINUX_VERSION }} (android12-5.10-lts)
             -> KSU Next ${{ env.KSU_NEXT_VERSION }}
-            -> OG KSU ${{ env.KSU_OFC_VERSION }}
             -> SukiSU ${{ env.SUKISU_VERSION }}
             -> SUSFS ඞ ${{ env.SUSFS_VERSION }}
 
             #### ✍️ Notes
-            -> This kernel only for GKI ${{ env.GKI_VERSION }} devices
+            -> This kernel only for GKI android12-5.10 device
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}

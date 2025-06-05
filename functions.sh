@@ -17,6 +17,7 @@ upload_file() {
     -F "disable_web_page_preview=true" \
     -F "parse_mode=markdown"
 }
+
 # reply_file <message_id> <path/to/file>
 reply_file() {
   local MESSAGE_ID="$1"
@@ -31,6 +32,7 @@ reply_file() {
     -F "disable_web_page_preview=true" \
     -F "parse_mode=markdown"
 }
+
 # send_msg <text>
 send_msg() {
   local MESSAGE="$1"
@@ -51,7 +53,8 @@ reply_msg() {
     -d "parse_mode=markdown" \
     -d "text=$MESSAGE"
 }
-# install_ksu <user/repo> [ref]
+
+# KernelSU-related functions
 install_ksu() {
   local REPO="$1"
   local REF="$2"
@@ -74,19 +77,45 @@ install_ksu() {
   curl -LSs "$URL" | bash -s "$REF"
   export KSU_VERSION="$LATEST_TAG"
 }
+
+# ksu_included() function
+# Type: bool
+ksu_included() {
+  # if variant is not nksu then
+  # kernelsu is included!
+  if [[ $VARIANT != "NKSU" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+# susfs_included() function
+# Type: bool
+susfs_included() {
+  if [[ $KSU_SUSFS == "true" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 # simplify_gh_url <github-repository-url>
 simplify_gh_url() {
   local URL="$1"
   echo "$URL" | sed "s|https://github.com/||g" | sed "s|.git||g"
 }
+
 # Kernel scripts function
 config() {
-  $workdir/ksrc/scripts/config --file "$DEFCONFIG_FILE" $@
+  $workdir/ksrc/scripts/config --file $DEFCONFIG_FILE $@
 }
+
 # Logging function
 log() {
   echo -e "[LOG] $*"
 }
+
 error() {
   echo -e "[ERROR] $*"
   if [[ -n $MESSAGE_ID ]]; then
