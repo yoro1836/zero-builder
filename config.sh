@@ -2,9 +2,6 @@
 
 # Kernel name
 KERNEL_NAME="QuartiX"
-# SuSFS
-SUSFS_REPO="https://gitlab.com/simonpunk/susfs4ksu"
-SUSFS_BRANCH="gki-android12-5.10"
 # Kernel Build variables
 USER="eraselk"
 HOST="gacorprjkt"
@@ -22,6 +19,4 @@ GKI_RELEASES_REPO="https://github.com/linastorvaldz/quartix-releases"
 CLANG_URL="https://gitlab.com/crdroidandroid/android_prebuilts_clang_host_linux-x86_clang-r547379.git"
 CLANG_BRANCH="15.0"
 # Zip name
-# These "KVER" "VARIANT" "BUILD_DATE"
-# are placeholders, they would be changed in main script
 ZIP_NAME="$KERNEL_NAME-KVER-VARIANT-BUILD_DATE.zip"

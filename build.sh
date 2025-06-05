@@ -22,7 +22,7 @@ git clone -q --depth=1 $KERNEL_REPO -b $KERNEL_BRANCH ksrc
 
 cd $workdir/ksrc
 LINUX_VERSION=$(make kernelversion)
-DEFCONFIG_FILE=$(find $workdir/ksrc/arch/arm64/configs -name "$KERNEL_DEFCONFIG")
+DEFCONFIG_FILE=$(find ./arch/arm64/configs -name "$KERNEL_DEFCONFIG")
 cd $workdir
 
 # Set KernelSU Variant
@@ -78,6 +78,7 @@ cd $workdir/ksrc
 
 ## KernelSU setup
 if ksu_included; then
+  # Renove existing KernelSU drivers
   for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU; do
     if [[ -d $KSU_PATH ]]; then
       log "KernelSU driver found in $KSU_PATH, Removing..."
@@ -90,30 +91,29 @@ if ksu_included; then
     fi
   done
 
+  # Install kernelsu
   log "Installing KernelSU..."
   case "$KSU" in
-    "Next") install_ksu KernelSU-Next/KernelSU-Next $(susfs_included && echo next-susfs-dev) ;;
+    "Next") install_ksu KernelSU-Next/KernelSU-Next $(susfs_included && echo next-susfs) ;;
     "Suki") install_ksu SukiSU-Ultra/SukiSU-Ultra $(susfs_included && echo susfs-dev) ;;
   esac
+  config --enable CONFIG_KSU
+fi
+
+# SUSFS
+if susfs_included; then
+  SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g' 2> /dev/null)
+  if [[ -z "$SUSFS_VERSION" ]]; then
+    error "Your Kernel doesn't support SuSFS!"
+  fi
+  config --enable CONFIG_KSU_SUSFS
 fi
 
 # KSU Manual Hooks
 if [[ $KSU_MANUAL_HOOK == "true" ]]; then
-  config --enable CONFIG_KSU_MANUAL_HOOK
-  config --disable CONFIG_KSU_WITH_KPROBE
   config --disable CONFIG_KSU_WITH_KPROBES
   config --disable CONFIG_KSU_KPROBES_HOOK
   config --disable CONFIG_KSU_SUSFS_SUS_SU
-fi
-
-# SUSFS
-if [[ $KSU_SUSFS == "true" ]]; then
-  SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g' 2> /dev/null)
-  if [[ -z "$SUSFS_VERSION" ]]; then
-    error "Your Kernel doesn't support SuSFS!"
-  else
-    config --enable CONFIG_KSU_SUSFS
-  fi
 fi
 
 # set localversion
@@ -300,7 +300,7 @@ fi
 if [[ $LAST_BUILD == "true" && $STATUS != "BETA" ]]; then
   (
     echo "LINUX_VERSION=$LINUX_VERSION"
-    echo "SUSFS_VERSION=$(curl -s https://gitlab.com/simonpunk/susfs4ksu/-/raw/${SUSFS_BRANCH}/kernel_patches/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g')"
+    echo "SUSFS_VERSION=$(curl -s https://gitlab.com/simonpunk/susfs4ksu/raw/gki-android12-5.10/kernel_patches/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g')"
     echo "KSU_NEXT_VERSION=$(gh api repos/KernelSU-Next/KernelSU-Next/tags --jq '.[0].name')"
     echo "SUKISU_VERSION=$(gh api repos/SukiSU-Ultra/SukiSU-Ultra/tags --jq '.[0].name')"
     echo "KERNEL_NAME=$KERNEL_NAME"
