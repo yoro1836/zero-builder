@@ -4,6 +4,10 @@ workdir=$(pwd)
 # Write output logs into build.log file
 exec > >(tee $workdir/build.log) 2>&1
 
+# Handle error
+set -e
+trap 'error "❌ Error at line $LINENO: command [$BASH_COMMAND] failed"' ERR
+
 # Import config and functions
 source $workdir/config.sh
 source $workdir/functions.sh
@@ -31,7 +35,6 @@ case "$KSU" in
   "Next") VARIANT="KSUN" ;;
   "Suki") VARIANT="SUKISU" ;;
   "None") VARIANT="NKSU" ;;
-  *) error "Invalid KernelSU Variant '$KSU'" ;;
 esac
 [[ $KSU_SUSFS == "true" ]] && VARIANT+="+SuSFS"
 
@@ -43,20 +46,20 @@ ZIP_NAME=${ZIP_NAME//VARIANT/$VARIANT}
 CLANG_DIR="$workdir/clang"
 if [[ -z "$CLANG_BRANCH" ]]; then
   log "🔽 Downloading Clang..."
-  wget -q "$CLANG_URL" -O tarball || error "Failed to download Clang."
+  wget -q "$CLANG_URL" -O tarball
   mkdir -p "$CLANG_DIR"
-  tar -xf tarball -C "$CLANG_DIR" || error "Failed to extract Clang."
-  rm -f tarball
+  tar -xf tarball -C "$CLANG_DIR"
+  rm tarball
 
   if [[ $(find "$CLANG_DIR" -mindepth 1 -maxdepth 1 -type d | wc -l) -eq 1 ]] \
     && [[ $(find "$CLANG_DIR" -mindepth 1 -maxdepth 1 -type f | wc -l) -eq 0 ]]; then
     SINGLE_DIR=$(find "$CLANG_DIR" -mindepth 1 -maxdepth 1 -type d)
-    mv -f $SINGLE_DIR/* $CLANG_RIR/
+    mv $SINGLE_DIR/* $CLANG_DIR/
     rm -rf $SINGLE_DIR
   fi
 else
   log "🔽 Cloning Clang..."
-  git clone --depth=1 -q "$CLANG_URL" -b "$CLANG_BRANCH" "$CLANG_DIR" || error "Failed to clone clang"
+  git clone --depth=1 -q "$CLANG_URL" -b "$CLANG_BRANCH" "$CLANG_DIR"
 fi
 
 export PATH="$CLANG_DIR/bin:$PATH"
@@ -78,7 +81,7 @@ cd $workdir/ksrc
 
 ## KernelSU setup
 if ksu_included; then
-  # Renove existing KernelSU drivers
+  # Remove existing KernelSU drivers
   for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU; do
     if [[ -d $KSU_PATH ]]; then
       log "KernelSU driver found in $KSU_PATH, Removing..."
@@ -102,10 +105,7 @@ fi
 
 # SUSFS
 if susfs_included; then
-  SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g' 2> /dev/null)
-  if [[ -z "$SUSFS_VERSION" ]]; then
-    error "Your Kernel doesn't support SuSFS!"
-  fi
+  SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
   config --enable CONFIG_KSU_SUSFS
 fi
 
@@ -149,17 +149,15 @@ EOF
 
 MESSAGE_ID=$(send_msg "$text" 2>&1 | jq -r .result.message_id)
 
-# Define build flags and kernel image
+# Define build flags and kernel image path
 BUILD_FLAGS="-j$(nproc --all) ARCH=arm64 LLVM=1 LLVM_IAS=1 O=out CROSS_COMPILE=$CROSS_COMPILE_PREFIX"
 KERNEL_IMAGE="$workdir/ksrc/out/arch/arm64/boot/Image"
 
 ## Build GKI
-set +e
-
 log "Generating config..."
 make $BUILD_FLAGS $KERNEL_DEFCONFIG
 
-# Upload config file
+# Upload defconfig if we are doing defconfig
 if [[ $TODO == "defconfig" ]]; then
   log "Uploading defconfig..."
   upload_file $workdir/ksrc/out/.config
@@ -169,13 +167,6 @@ fi
 # Build the actual kernel
 log "Building kernel..."
 make $BUILD_FLAGS Image
-retVal=${PIPESTATUS[0]}
-
-set -e
-
-if [[ ! -f $KERNEL_IMAGE ]] || [[ $retVal -gt 0 ]]; then
-  error "Build Failed!"
-fi
 
 ## Post-compiling stuff
 cd $workdir
@@ -220,7 +211,6 @@ zip -r9 $workdir/$ZIP_NAME ./*
 cd -
 
 if [[ $BUILD_BOOTIMG == "true" ]]; then
-  # Clone required tools
   AOSP_MIRROR=https://android.googlesource.com
   AOSP_BRANCH=main-kernel-build-2024
   log "Cloning build tools..."
@@ -228,14 +218,12 @@ if [[ $BUILD_BOOTIMG == "true" ]]; then
   log "Cloning mkbootimg..."
   git clone -q --depth=1 $AOSP_MIRROR/platform/system/tools/mkbootimg -b $AOSP_BRANCH mkbootimg
 
-  # Variables
   AVBTOOL="$workdir/build-tools/linux-x86/bin/avbtool"
   MKBOOTIMG="$workdir/mkbootimg/mkbootimg.py"
   UNPACK_BOOTIMG="$workdir/mkbootimg/unpack_bootimg.py"
   BOOT_SIGN_KEY_PATH="$workdir/key/key.pem"
-  BOOTIMG_NAME="${ZIP_NAME%.zip}-boot-dummy.img"
+  BOOTIMG_NAME="${ZIP_NAME%.zip}-boot-dummy1.img"
 
-  # Function
   generate_bootimg() {
     local kernel="$1"
     local output="$2"
@@ -247,7 +235,7 @@ if [[ $BUILD_BOOTIMG == "true" ]]; then
       --output "$output" \
       --ramdisk out/ramdisk \
       --os_version 12.0.0 \
-      --os_patch_level $(date +"%Y-%m")
+      --os_patch_level "2099-12"
 
     sleep 0.5
 
@@ -261,13 +249,11 @@ if [[ $BUILD_BOOTIMG == "true" ]]; then
       --key $BOOT_SIGN_KEY_PATH
   }
 
-  # Prepare boot image
   mkdir -p bootimg && cd bootimg
   cp $KERNEL_IMAGE .
   gzip -n -f -9 -c Image > Image.gz
   lz4 -l -12 --favor-decSpeed Image Image.lz4
 
-  # Download and unpack prebuilt GKI
   log "Downloading prebuilt GKI..."
   wget -qO gki.zip https://dl.google.com/android/gki/gki-certified-boot-android12-5.10-2023-01_r1.zip
   log "Unpacking prebuilt GKI..."
@@ -275,18 +261,14 @@ if [[ $BUILD_BOOTIMG == "true" ]]; then
   $UNPACK_BOOTIMG --boot_img=boot-5.10.img
   rm boot-5.10.img
 
-  # Generate and sign boot images in multiple formats (raw, lz4, gz)
   for format in raw lz4 gz; do
-    # Initialize kernel variable
     kernel="./Image"
     [[ $format != "raw" ]] && kernel+=".$format"
 
-    log "Using kernel: $kernel"
-    output="${BOOTIMG_NAME/dummy/$format}"
-    generate_bootimg "$kernel" "$output"
+    _output="${BOOTIMG_NAME/dummy1/$format}"
+    generate_bootimg "$kernel" "$_output"
 
-    log "Moving $output to work directory"
-    mv -f "$output" $workdir
+    mv "$_output" $workdir
   done
   cd $workdir
 fi
@@ -294,7 +276,7 @@ fi
 if [[ $STATUS != "BETA" ]]; then
   echo "BASE_NAME=$KERNEL_NAME-$VARIANT" >> $GITHUB_ENV
   mkdir -p $workdir/artifacts
-  mv -f $workdir/{*.zip,*.img} $workdir/artifacts
+  mv $workdir/*.zip $workdir/*.img $workdir/artifacts
 fi
 
 if [[ $LAST_BUILD == "true" && $STATUS != "BETA" ]]; then
@@ -309,9 +291,10 @@ if [[ $LAST_BUILD == "true" && $STATUS != "BETA" ]]; then
 fi
 
 if [[ $STATUS == "BETA" ]]; then
-  for file in $workdir/{*.zip,*.img}; do
+  for file in $workdir/*.zip $workdir/*.img; do
     if [[ -f $file ]]; then
       reply_file "$MESSAGE_ID" "$file"
+      sleep 1
     fi
   done
 else
