@@ -8,9 +8,11 @@ jobs:
     strategy:
       matrix:
         variant:
-          - { name: "NKSU", KSU: "None", KSU_SUSFS: "false", KSU_MANUAL_HOOK: "false", LAST_BUILD: "false" }
-          - { name: "KSUN", KSU: "Next", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "true", LAST_BUILD: "false" }
-          - { name: "SUKISU", KSU: "Suki", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "true", LAST_BUILD: "true" }
+          - { name: "Non-KSU", KSU: "None", KSU_SUSFS: "false", KSU_MANUAL_HOOK: "false", LAST_BUILD: "false" }
+          - { name: "KSUN-Only", KSU: "Next", KSU_SUSFS: "false", KSU_MANUAL_HOOK: "true", LAST_BUILD: "false" }
+          - { name: "KSUN+SuSFS", KSU: "Next", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "true", LAST_BUILD: "false" }
+          - { name: "SUKISU-Only", KSU: "Suki", KSU_SUSFS: "false", KSU_MANUAL_HOOK: "true", LAST_BUILD: "false" }
+          - { name: "SUKISU+SuSFS", KSU: "Suki", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "true", LAST_BUILD: "true" }
     name: Build ${{ matrix.variant.name }} variant
     uses: ./.github/workflows/build.yml
     secrets: inherit
@@ -68,6 +70,8 @@ jobs:
             # Handle case when $LATEST_TAG doesn't contain $KERNEL_NAME
             if ! echo "$LATEST_TAG" | grep -q "$KERNEL_NAME"; then
                 RELEASE_TAG="$KERNEL_NAME-r0"
+            else
+                RELEASE_TAG="$LATEST_TAG"
             fi
 
             RELEASE_TAG="$(echo "$RELEASE_TAG" | awk -F'-r' '{suffix=$2; if (!suffix) suffix=0; suffix++; printf "%s-r%d", $1, suffix}')"
