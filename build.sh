@@ -95,7 +95,6 @@ if ksu_included; then
   done
 
   # Install kernelsu
-  log "Installing KernelSU..."
   case "$KSU" in
     "Next") install_ksu KernelSU-Next/KernelSU-Next $(susfs_included && echo next-susfs) ;;
     "Suki") install_ksu SukiSU-Ultra/SukiSU-Ultra $(susfs_included && echo susfs-dev) ;;
