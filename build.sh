@@ -110,7 +110,7 @@ fi
 
 # KSU Manual Hooks
 if [[ $KSU_MANUAL_HOOK == "true" ]]; then
-  config --disable CONFIG_KSU_WITH_KPROBES
+  config --enable CONFIG_KSU_MANUAL_HOOK
   config --disable CONFIG_KSU_KPROBES_HOOK
   config --disable CONFIG_KSU_SUSFS_SUS_SU
 fi
