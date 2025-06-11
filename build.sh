@@ -6,7 +6,7 @@ exec > >(tee $workdir/build.log) 2>&1
 
 # Handle error
 set -e
-trap 'error "❌ Error at line $LINENO: command [$BASH_COMMAND] failed"' ERR
+trap 'error "Failed at line $LINENO [$BASH_COMMAND]"' ERR
 
 # Import config and functions
 source $workdir/config.sh
@@ -14,11 +14,6 @@ source $workdir/functions.sh
 
 # Set timezone
 sudo timedatectl set-timezone "$TIMEZONE"
-
-# Clone kernel patches
-SHIRKNEKO_PATCHES=https://github.com/ShirkNeko/SukiSU_patch
-log "Cloning kernel patches from $(simplify_gh_url "$SHIRKNEKO_PATCHES")"
-git clone -q --depth=1 $SHIRKNEKO_PATCHES shirkneko_patches
 
 # Clone kernel source
 log "Cloning kernel source from $(simplify_gh_url "$KERNEL_REPO")"
@@ -106,10 +101,16 @@ fi
 if susfs_included; then
   SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
   config --enable CONFIG_KSU_SUSFS
+else
+  config --disable CONFIG_KSU_SUSFS
 fi
 
 # KSU Manual Hooks
 if [[ $KSU_MANUAL_HOOK == "true" ]]; then
+  # Apply manual hook patch
+  log "Applying manual hook patch"
+  patch -p1 < $workdir/kernel-patches/manual-hook.patch || error "Failed to apply manual hook patch"
+
   config --enable CONFIG_KSU_MANUAL_HOOK
   config --disable CONFIG_KSU_KPROBES_HOOK
   config --disable CONFIG_KSU_SUSFS_SUS_SU
@@ -117,10 +118,11 @@ fi
 
 # set localversion
 if [[ $TODO == "kernel" ]]; then
+  LATEST_COMMIT_HASH=$(git rev-parse --short HEAD)
   if [[ $STATUS == "BETA" ]]; then
-    SUFFIX=$(git rev-parse --short HEAD)
+    SUFFIX=$LATEST_COMMIT_HASH
   else
-    SUFFIX="release"
+    SUFFIX="release@${LATEST_COMMIT_HASH}"
   fi
   config --set-str CONFIG_LOCALVERSION "-$KERNEL_NAME/$SUFFIX"
 fi
@@ -172,12 +174,13 @@ cd $workdir
 
 # Patch the kernel Image for KPM Supports
 if [[ $KSU == "Suki" ]]; then
-  mkdir -p sukisu-patch && cd sukisu-patch
-  # Setup patch_linux
-  cp $workdir/shirkneko_patches/kpm/patch_linux .
+  git clone -q --depth=1 https://github.com/ShirkNeko/SukiSU_patch suki-patch
+  # Setup
+  mkdir -p yesking && cd yesking
+  cp $workdir/suki-patch/kpm/patch_linux .
   chmod a+x ./patch_linux
-  # Patch kernel image
   cp $KERNEL_IMAGE ./Image
+  # Patch kernel image
   sudo ./patch_linux
   mv oImage Image
   KERNEL_IMAGE=$(pwd)/Image
