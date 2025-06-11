@@ -101,6 +101,7 @@ fi
 if susfs_included; then
   SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
   config --enable CONFIG_KSU_SUSFS
+  config --disable CONFIG_KSU_SUSFS_SUS_SU
 else
   config --disable CONFIG_KSU_SUSFS
 fi
@@ -113,7 +114,6 @@ if [[ $KSU_MANUAL_HOOK == "true" ]]; then
 
   config --enable CONFIG_KSU_MANUAL_HOOK
   config --disable CONFIG_KSU_KPROBES_HOOK
-  config --disable CONFIG_KSU_SUSFS_SUS_SU
 fi
 
 # set localversion
