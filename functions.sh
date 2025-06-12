@@ -83,21 +83,15 @@ install_ksu() {
 ksu_included() {
   # if variant is not nksu then
   # kernelsu is included!
-  if [[ $VARIANT != "NKSU" ]]; then
-    return 0
-  else
-    return 1
-  fi
+  [[ $VARIANT != "NKSU" ]]
+  return $?
 }
 
 # susfs_included() function
 # Type: bool
 susfs_included() {
-  if [[ $KSU_SUSFS == "true" ]]; then
-    return 0
-  else
-    return 1
-  fi
+  [[ $KSU_SUSFS == "true" ]]
+  return $?
 }
 
 # simplify_gh_url <github-repository-url>
