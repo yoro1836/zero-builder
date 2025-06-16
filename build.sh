@@ -109,13 +109,13 @@ if susfs_included; then
   cp -R $SUSFS_PATCHES/fs/* ./fs
   cp -R $SUSFS_PATCHES/include/* ./include
 
-  patch -p1 < $SUSFS_PATCHES/50_add_susfs_in_gki-android12-5.10.patch || error "Failed to apply kernel-side susfs patches"
+  patch -p1 < $SUSFS_PATCHES/50_add_susfs_in_gki-android12-5.10.patch
 
   # KSU-Next side
   if [[ $KSU == "Next" ]]; then
     log "Applying kernelsu-side susfs patches"
     cd KernelSU-Next
-    patch -p1 < $workdir/kernel-patches/ksun_susfs.patch || error "Failed to apply kernelsu-side susfs patches"
+    patch -p1 < $workdir/kernel-patches/ksun_susfs.patch
     cd -
   fi
 
@@ -130,7 +130,7 @@ fi
 if [[ $KSU_MANUAL_HOOK == "true" ]]; then
   # Apply manual hook patch
   log "Applying manual hook patch"
-  patch -p1 < $workdir/kernel-patches/manual-hook.patch || error "Failed to apply manual hook patch"
+  patch -p1 < $workdir/kernel-patches/manual-hook.patch
 
   config --enable CONFIG_KSU_MANUAL_HOOK
   config --disable CONFIG_KSU_KPROBES_HOOK
