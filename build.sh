@@ -91,7 +91,7 @@ if ksu_included; then
 
   # Install kernelsu
   case "$KSU" in
-    "Next") install_ksu KernelSU-Next/KernelSU-Next $(susfs_included && echo next-susfs || echo next) ;;
+    "Next") install_ksu KernelSU-Next/KernelSU-Next next ;;
     "Suki") install_ksu SukiSU-Ultra/SukiSU-Ultra $(susfs_included && echo susfs-main || echo main) ;;
   esac
   config --enable CONFIG_KSU
@@ -99,9 +99,29 @@ fi
 
 # SUSFS
 if susfs_included; then
+  # Kernel-side
+  log "Applying kernel-side susfs patches"
+  git clone --depth=1 -q https://github.com/simonpunk/susfs4ksu \
+    -b gki-android12-5.10 \
+    $workdir/susfs
+  SUSFS_PATCHES=$workdir/susfs/kernel_patches
+
+  cp -R $SUSFS_PATCHES/fs/* ./fs
+  cp -R $SUSFS_PATCHES/include/* ./include
+
+  patch -p1 < $SUSFS_PATCHES/50_add_susfs_in_gki-android12-5.10.patch || error "Failed to apply kernel-side susfs patches"
+
+  # KSU-Next side
+  if [[ $KSU == "Next" ]]; then
+    log "Applying kernelsu-side susfs patches"
+    cd KernelSU-Next
+    patch -p1 < $workdir/kernel-patches/ksun_susfs.patch || error "Failed to apply kernelsu-side susfs patches"
+    cd -
+  fi
+
   SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
   config --enable CONFIG_KSU_SUSFS
-  config --disable CONFIG_KSU_SUSFS_SUS_SU
+  config --disable CONFIG_KSU_SUSFS_SUS_SU # Useless.
 else
   config --disable CONFIG_KSU_SUSFS
 fi
@@ -116,6 +136,11 @@ if [[ $KSU_MANUAL_HOOK == "true" ]]; then
   config --disable CONFIG_KSU_KPROBES_HOOK
 fi
 
+# Enable KPM Supports for SukiSU
+if [[ $KSU == "Suki" ]]; then
+  config --enable CONFIG_KPM
+fi
+
 # set localversion
 if [[ $TODO == "kernel" ]]; then
   LATEST_COMMIT_HASH=$(git rev-parse --short HEAD)
@@ -125,11 +150,6 @@ if [[ $TODO == "kernel" ]]; then
     SUFFIX="release@${LATEST_COMMIT_HASH}"
   fi
   config --set-str CONFIG_LOCALVERSION "-$KERNEL_NAME/$SUFFIX"
-fi
-
-# Enable KPM Supports for SukiSU
-if [[ $KSU == "Suki" ]]; then
-  config --enable CONFIG_KPM
 fi
 
 # Declare needed variables
@@ -174,16 +194,20 @@ cd $workdir
 
 # Patch the kernel Image for KPM Supports
 if [[ $KSU == "Suki" ]]; then
-  git clone -q --depth=1 https://github.com/ShirkNeko/SukiSU_patch suki-patch
-  # Setup
-  mkdir -p yesking && cd yesking
-  cp $workdir/suki-patch/kpm/patch_linux .
+  mkdir -p sukisu-patch && cd sukisu-patch
+
+  # Setup patching tool
+  # https://api.github.com/repos/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/latest
+  LATEST_SUKISU_PATCH=$(curl -s "https://api.github.com/repos/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/latest" | grep "browser_download_url" | grep "patch_linux" | cut -d '"' -f 4)
+  curl -s "$LATEST_SUKISU_PATCH" -o patch_linux
   chmod a+x ./patch_linux
+
+  # Patch the kernel image
   cp $KERNEL_IMAGE ./Image
-  # Patch kernel image
   sudo ./patch_linux
   mv oImage Image
   KERNEL_IMAGE=$(pwd)/Image
+
   cd -
 fi
 
