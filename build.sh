@@ -92,7 +92,7 @@ if ksu_included; then
   # Install kernelsu
   case "$KSU" in
     "Next") install_ksu KernelSU-Next/KernelSU-Next $(susfs_included && echo next-susfs || echo next) ;;
-    "Suki") install_ksu SukiSU-Ultra/SukiSU-Ultra $(susfs_included && echo susfs-dev || echo main) ;;
+    "Suki") install_ksu SukiSU-Ultra/SukiSU-Ultra $(susfs_included && echo susfs-main || echo main) ;;
   esac
   config --enable CONFIG_KSU
 fi
