@@ -92,7 +92,7 @@ if ksu_included; then
   # Install kernelsu
   case "$KSU" in
     "Next") install_ksu KernelSU-Next/KernelSU-Next next ;;
-    "Suki") install_ksu SukiSU-Ultra/SukiSU-Ultra $(susfs_included && echo susfs-main || echo main) ;;
+    "Suki") install_ksu SukiSU-Ultra/SukiSU-Ultra susfs-main ;;
   esac
   config --enable CONFIG_KSU
 fi
@@ -111,11 +111,12 @@ if susfs_included; then
 
   patch -p1 < $SUSFS_PATCHES/50_add_susfs_in_gki-android12-5.10.patch
 
-  # KSU-Next side
+  # KSU-Next specific
   if [[ $KSU == "Next" ]]; then
-    log "Applying kernelsu-side susfs patches"
+    log "Applying specific patches for kernelsu next"
+    patch -p1 < $workdir/kernel-patches/susfs-brickport.patch
     cd KernelSU-Next
-    patch -p1 < $workdir/kernel-patches/ksun_susfs.patch
+    patch -p1 < $workdir/kernel-patches/ksun-susfs.patch
     cd -
   fi
 
