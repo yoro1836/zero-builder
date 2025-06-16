@@ -20,7 +20,7 @@ on:
     inputs:
       TODO:
         description: To do
-        default: "kernel"
+        default: ""
         type: choice
         options:
           - "kernel"
@@ -28,7 +28,7 @@ on:
 
       KSU:
         description: KernelSU variant
-        default: "Next"
+        default: ""
         type: choice
         options:
           - "None"
@@ -37,7 +37,7 @@ on:
 
       KSU_SUSFS:
         description: Include SUSFS?
-        default: "true"
+        default: "false"
         type: choice
         options:
           - "true"
@@ -45,7 +45,7 @@ on:
 
       KSU_MANUAL_HOOK:
         description: Use KSU Manual Hooks?
-        default: "true"
+        default: "false"
         type: choice
         options:
           - "true"
