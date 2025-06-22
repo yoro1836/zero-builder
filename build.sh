@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 workdir=$(pwd)
 
-# Write output logs into build.log file
-exec > >(tee $workdir/build.log) 2>&1
-
 # Handle error
 set -e
+exec > >(tee $workdir/build.log) 2>&1
 trap 'error "Failed at line $LINENO [$BASH_COMMAND]"' ERR
 
 # Import config and functions
@@ -168,7 +166,6 @@ text=$(
 🔰 *Compiler*: $COMPILER_STRING
 EOF
 )
-
 MESSAGE_ID=$(send_msg "$text" 2>&1 | jq -r .result.message_id)
 
 # Define build flags and kernel image path
@@ -195,10 +192,9 @@ cd $workdir
 
 # Patch the kernel Image for KPM Supports
 if [[ $KSU == "Suki" ]]; then
-  mkdir -p sukisu-patch && cd sukisu-patch
+  tempdir=$(mktemp -d) && cd $tempdir
 
   # Setup patching tool
-  # https://api.github.com/repos/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/latest
   LATEST_SUKISU_PATCH=$(curl -s "https://api.github.com/repos/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/latest" | grep "browser_download_url" | grep "patch_linux" | cut -d '"' -f 4)
   wget "$LATEST_SUKISU_PATCH" -O patch_linux
   chmod a+x ./patch_linux
@@ -276,17 +272,15 @@ if [[ $BUILD_BOOTIMG == "true" ]]; then
       --key $BOOT_SIGN_KEY_PATH
   }
 
-  mkdir -p bootimg && cd bootimg
+  tempdir=$(mktemp -d) && cd $tempdir
   cp $KERNEL_IMAGE .
   gzip -n -f -9 -c Image > Image.gz
   lz4 -l -12 --favor-decSpeed Image Image.lz4
 
-  log "Downloading prebuilt GKI..."
+  log "Downloading ramdisk..."
   wget -qO gki.zip https://dl.google.com/android/gki/gki-certified-boot-android12-5.10-2023-01_r1.zip
-  log "Unpacking prebuilt GKI..."
   unzip -q gki.zip && rm gki.zip
-  $UNPACK_BOOTIMG --boot_img=boot-5.10.img
-  rm boot-5.10.img
+  $UNPACK_BOOTIMG --boot_img=boot-5.10.img && rm boot-5.10.img
 
   for format in raw lz4 gz; do
     kernel="./Image"
@@ -318,12 +312,7 @@ if [[ $LAST_BUILD == "true" && $STATUS != "BETA" ]]; then
 fi
 
 if [[ $STATUS == "BETA" ]]; then
-  for file in $workdir/*.zip $workdir/*.img; do
-    if [[ -f $file ]]; then
-      reply_file "$MESSAGE_ID" "$file"
-      sleep 1
-    fi
-  done
+  reply_file "$MESSAGE_ID" "$workdir/$ZIP_NAME"
 else
   reply_msg "$MESSAGE_ID" "✅ Build Succeeded"
 fi
