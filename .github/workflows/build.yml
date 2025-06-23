@@ -51,14 +51,6 @@ on:
           - "true"
           - "false"
 
-      BUILD_BOOTIMG:
-        description: Build Boot Image?
-        default: "false"
-        type: choice
-        options:
-          - "true"
-          - "false"
-
 jobs:
   build:
     runs-on: ubuntu-latest
