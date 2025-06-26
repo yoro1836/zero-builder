@@ -13,9 +13,11 @@ YUKI_REPO="https://api.github.com/repos/Klozz/Yuki_clang_releases/releases/lates
 LILIUM_REPO="https://api.github.com/repos/liliumproject/clang/releases/latest"
 # topnotchfreaks clang
 TNF_REPO="https://api.github.com/repos/topnotchfreaks/clang/releases/latest"
+# neutron clang
+NEUTRON_REPO="https://api.github.com/repos/Neutron-Toolchains/clang-build-catalogue/releases/latest"
 
 show_usage() {
-  CLANG_NAME="slim, rv, aosp, yuki, lilium, tnf"
+  CLANG_NAME="slim, rv, aosp, yuki, lilium, tnf, neutron"
   echo "Usage: $0 <clang name>"
   echo "clang name: $CLANG_NAME"
 }
@@ -40,12 +42,14 @@ case "$1" in
   "tnf")
     curl -s "$TNF_REPO" | grep "browser_download_url" | grep ".tar.gz" | cut -d '"' -f 4
     ;;
+  "neutron")
+    curl -s "$NEUTRON_REPO" | grep "browser_download_url" | grep ".tar.zst" | cut -d '"' -f 4
+    ;;
   *)
     if [[ -z $1 ]]; then
       show_usage
     else
       echo "Invalid clang name '$1'"
-      sleep 0.2
       echo
       show_usage
     fi
