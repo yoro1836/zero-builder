@@ -90,7 +90,7 @@ if ksu_included; then
   # Install kernelsu
   case "$KSU" in
     "Next") install_ksu KernelSU-Next/KernelSU-Next next ;;
-    "Suki") install_ksu SukiSU-Ultra/SukiSU-Ultra susfs-main ;;
+    "Suki") install_ksu SukiSU-Ultra/SukiSU-Ultra susfs-1.5.8 ;;
   esac
   config --enable CONFIG_KSU
 fi
@@ -112,7 +112,6 @@ if susfs_included; then
   # KSU-Next specific
   if [[ $KSU == "Next" ]]; then
     log "Applying specific patches for kernelsu next"
-    patch -p1 < $workdir/kernel-patches/susfs-brickport.patch
     cd KernelSU-Next
     patch -p1 < $workdir/kernel-patches/ksun-susfs.patch
     cd -
