@@ -114,7 +114,7 @@ jobs:
           export MAN_DISABLE=true
           sudo apt update -y
           sudo apt install -y bc cpio flex bison aptitude gh git python-is-python3 \
-                              tar perl wget curl lz4 zstd libarchive-tools
+                              tar perl wget curl lz4 zstd libarchive-tools aria2
           sudo aptitude install -y libssl-dev
 
       - name: Run Build Script
