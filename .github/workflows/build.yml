@@ -113,9 +113,10 @@ jobs:
         run: |
           export MAN_DISABLE=true
           sudo apt update -y
-          sudo apt install -y bc cpio flex bison aptitude gh git python-is-python3 \
+          sudo apt install -y bc cpio flex bison aptitude gh git python3 \
                               tar perl wget curl lz4 zstd libarchive-tools aria2
           sudo aptitude install -y libssl-dev
+          pip install lxml
 
       - name: Run Build Script
         env:

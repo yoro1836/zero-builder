@@ -14,10 +14,11 @@ source $workdir/functions.sh
 sudo timedatectl set-timezone "$TIMEZONE"
 
 # Clone kernel source
+KSRC="$workdir/ksrc"
 log "Cloning kernel source from $(simplify_gh_url "$KERNEL_REPO")"
-git clone -q --depth=1 $KERNEL_REPO -b $KERNEL_BRANCH ksrc
+git clone -q --depth=1 $KERNEL_REPO -b $KERNEL_BRANCH $KSRC
 
-cd $workdir/ksrc
+cd $KSRC
 LINUX_VERSION=$(make kernelversion)
 DEFCONFIG_FILE=$(find ./arch/arm64/configs -name "$KERNEL_DEFCONFIG")
 cd $workdir
@@ -70,7 +71,7 @@ else
   CROSS_COMPILE_PREFIX="aarch64-linux-gnu-"
 fi
 
-cd $workdir/ksrc
+cd $KSRC
 
 ## KernelSU setup
 if ksu_included; then
@@ -154,6 +155,10 @@ fi
 export KBUILD_BUILD_USER="$USER"
 export KBUILD_BUILD_HOST="$HOST"
 export KBUILD_BUILD_TIMESTAMP=$(date)
+BUILD_FLAGS="-j$(nproc --all) ARCH=arm64 LLVM=1 LLVM_IAS=1 O=out CROSS_COMPILE=$CROSS_COMPILE_PREFIX"
+KERNEL_IMAGE="$KSRC/out/arch/arm64/boot/Image"
+KMI_CHECK="$workdir/scripts/KMI_function_symbols_test.py"
+MODULE_SYMVERS="$KSRC/out/Module.symvers"
 
 text=$(
   cat << EOF
@@ -167,10 +172,6 @@ EOF
 )
 MESSAGE_ID=$(send_msg "$text" 2>&1 | jq -r .result.message_id)
 
-# Define build flags and kernel image path
-BUILD_FLAGS="-j$(nproc --all) ARCH=arm64 LLVM=1 LLVM_IAS=1 O=out CROSS_COMPILE=$CROSS_COMPILE_PREFIX"
-KERNEL_IMAGE="$workdir/ksrc/out/arch/arm64/boot/Image"
-
 ## Build GKI
 log "Generating config..."
 make $BUILD_FLAGS $KERNEL_DEFCONFIG
@@ -178,13 +179,16 @@ make $BUILD_FLAGS $KERNEL_DEFCONFIG
 # Upload defconfig if we are doing defconfig
 if [[ $TODO == "defconfig" ]]; then
   log "Uploading defconfig..."
-  upload_file $workdir/ksrc/out/.config
+  upload_file $KSRC/out/.config
   exit 0
 fi
 
 # Build the actual kernel
 log "Building kernel..."
-make $BUILD_FLAGS Image
+make $BUILD_FLAGS Image modules
+
+# Check KMI Function symbol
+$KMI_CHECK "$KSRC/android/abi_gki_aarch64.xml" "$MODULE_SYMVERS"
 
 ## Post-compiling stuff
 cd $workdir
@@ -312,6 +316,7 @@ fi
 
 if [[ $STATUS == "BETA" ]]; then
   reply_file "$MESSAGE_ID" "$workdir/$ZIP_NAME"
+  reply_file "$MESSAGE_ID" "$workdir/build.log"
 else
   reply_msg "$MESSAGE_ID" "✅ Build Succeeded"
 fi
