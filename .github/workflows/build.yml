@@ -33,6 +33,7 @@ on:
         options:
           - "None"
           - "Next"
+          - "Rissu"
           - "Suki"
 
       KSU_SUSFS:

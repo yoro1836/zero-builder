@@ -28,6 +28,7 @@ log "Setting KernelSU variant..."
 case "$KSU" in
   "Next") VARIANT="KSUN" ;;
   "Suki") VARIANT="SUKISU" ;;
+  "Rissu") VARIANT="RKSU" ;;
   "None") VARIANT="NKSU" ;;
 esac
 [[ $KSU_SUSFS == "true" ]] && VARIANT+="+SuSFS"
@@ -92,6 +93,7 @@ if ksu_included; then
   case "$KSU" in
     "Next") install_ksu KernelSU-Next/KernelSU-Next next ;;
     "Suki") install_ksu SukiSU-Ultra/SukiSU-Ultra susfs-1.5.8 ;;
+    "Rissu") install_ksu rsuntk/KernelSU $(susfs_included && echo "staging/susfs-main" || echo "main") ;;
   esac
   config --enable CONFIG_KSU
 fi

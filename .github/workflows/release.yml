@@ -12,7 +12,9 @@ jobs:
           - { name: "KSUN-Only", KSU: "Next", KSU_SUSFS: "false", KSU_MANUAL_HOOK: "true", LAST_BUILD: "false" }
           - { name: "KSUN+SuSFS", KSU: "Next", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "true", LAST_BUILD: "false" }
           - { name: "SUKISU-Only", KSU: "Suki", KSU_SUSFS: "false", KSU_MANUAL_HOOK: "true", LAST_BUILD: "false" }
-          - { name: "SUKISU+SuSFS", KSU: "Suki", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "true", LAST_BUILD: "true" }
+          - { name: "SUKISU+SuSFS", KSU: "Suki", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "true", LAST_BUILD: "falss" }
+          - { name: "RKSU-Only", KSU: "Rissu", KSU_SUSFS: "false", KSU_MANUAL_HOOK: "true", LAST_BUILD: "false" }
+          - { name: "RKSU+SuSFS", KSU: "Rissu", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "true", LAST_BUILD: "true" }
     name: Build ${{ matrix.variant.name }} variant
     uses: ./.github/workflows/build.yml
     secrets: inherit
