@@ -106,15 +106,11 @@ if susfs_included; then
     -b gki-android12-5.10 \
     $workdir/susfs
   SUSFS_PATCHES=$workdir/susfs/kernel_patches
-
   cp -R $SUSFS_PATCHES/fs/* ./fs
   cp -R $SUSFS_PATCHES/include/* ./include
-
   patch -p1 < $SUSFS_PATCHES/50_add_susfs_in_gki-android12-5.10.patch
-
   SUSFS_VERSION=$(grep -E '^#define SUSFS_VERSION' ./include/linux/susfs.h | cut -d' ' -f3 | sed 's/"//g')
   config --enable CONFIG_KSU_SUSFS
-  config --disable CONFIG_KSU_SUSFS_SUS_SU # Useless.
 else
   config --disable CONFIG_KSU_SUSFS
 fi
@@ -124,9 +120,9 @@ if [[ $KSU_MANUAL_HOOK == "true" ]]; then
   # Apply manual hook patch
   log "Applying manual hook patch"
   patch -p1 < $workdir/kernel-patches/manual-hook.patch
-
   config --enable CONFIG_KSU_MANUAL_HOOK
   config --disable CONFIG_KSU_KPROBES_HOOK
+  config --disable CONFIG_KSU_SUSFS_SUS_SU # Conflicts with manual hook
 fi
 
 # Enable KPM Supports for SukiSU
