@@ -5,8 +5,7 @@ SLIM_REPO="https://www.kernel.org/pub/tools/llvm/files/"
 # rv clang
 RV_REPO="https://api.github.com/repos/Rv-Project/RvClang/releases/latest"
 # aosp clang
-AOSP_REPO="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/mirror-goog-main-llvm-toolchain-source"
-AOSP_ARCHIVE="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/mirror-goog-main-llvm-toolchain-source"
+AOSP_REPO="https://api.github.com/repos/bachnxuan/aosp_clang_mirror/releases/latest"
 # yuki clang
 YUKI_REPO="https://api.github.com/repos/Klozz/Yuki_clang_releases/releases/latest"
 # lilium clang
@@ -30,12 +29,7 @@ case "$1" in
     curl -s "$RV_REPO" | grep "browser_download_url" | grep ".tar.gz" | cut -d '"' -f 4
     ;;
   "aosp")
-    LATEST_CLANG=$(curl -s "$AOSP_REPO" \
-      | grep -oP 'href="[^"]*clang-r[0-9]+/' \
-      | grep -oP 'clang-r[0-9]+' \
-      | sort -V \
-      | tail -n1)
-    echo "$AOSP_ARCHIVE/$LATEST_CLANG.tar.gz"
+    curl -s "$AOSP_REPO" | grep "browser_download_url" | grep ".tar.gz" | cut -d '"' -f 4
     ;;
   "yuki")
     curl -s "$YUKI_REPO" | grep "browser_download_url" | grep ".tar.gz" | cut -d '"' -f 4
