@@ -94,6 +94,13 @@ susfs_included() {
   return $?
 }
 
+# ksu_manual_hook() function
+# Type: bool
+ksu_manual_hook() {
+  [[ $KSU_MANUAL_HOOK == "true" ]]
+  return $?
+}
+
 # simplify_gh_url <github-repository-url>
 simplify_gh_url() {
   local URL="$1"

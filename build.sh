@@ -90,8 +90,8 @@ if ksu_included; then
 
   # Install kernelsu
   case "$KSU" in
-    "Next") install_ksu bintang774/KernelSU-Next $(susfs_included && echo "next-susfs" || echo "next") ;;
-    "Suki") install_ksu SukiSU-Ultra/SukiSU-Ultra susfs-main ;;
+    "Next") install_ksu bintang774/KernelSU-Next $(if susfs_included; then echo "next-susfs"; else echo "next"; fi) ;;
+    "Suki") install_ksu SukiSU-Ultra/SukiSU-Ultra $(if susfs_included; then echo "susfs-main"; elif ksu_manual_hook; then echo "nongki"; else echo "main"; fi) ;;
   esac
   config --enable CONFIG_KSU
 fi
@@ -114,7 +114,7 @@ else
 fi
 
 # KSU Manual Hooks
-if [[ $KSU_MANUAL_HOOK == "true" ]]; then
+if ksu_manual_hook; then
   # Apply manual hook patch
   log "Applying manual hook patch"
   patch -p1 < $workdir/kernel-patches/manual-hook.patch
