@@ -187,7 +187,7 @@ if [[ $KSU == "Suki" ]]; then
 
   # Setup patching tool
   LATEST_SUKISU_PATCH=$(curl -s "https://api.github.com/repos/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/latest" | grep "browser_download_url" | grep "patch_linux" | cut -d '"' -f 4)
-  wget "$LATEST_SUKISU_PATCH" -O patch_linux
+  curl -Ls "$LATEST_SUKISU_PATCH" -o patch_linux
   chmod a+x ./patch_linux
 
   # Patch the kernel image
