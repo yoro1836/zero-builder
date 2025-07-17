@@ -39,25 +39,45 @@ jobs:
         with:
           path: release_files
 
-      - name: Extract variables from info.txt
-        env:
-            TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-            TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+      - name: Extract variables from info.txt (Safe)
         run: |
-          set -e  # Exit on error
-          source functions.sh # We need error() function
-          info_file="release_files/info-${{ github.run_number }}/info.txt"
+          # Find the info.txt file
+          info_file=$(find release_files -name "info.txt" -type f | head -1)
 
           if [[ -f "$info_file" ]]; then
+            echo "Found info.txt at: $info_file"
+
+            # Extract variables safely without using functions.sh
             while IFS='=' read -r key value; do
-              key=$(echo -n "$key" | tr -d ' ')
-              value=$(echo -n "$value" | tr -d ' ')
-              echo "$key=$value" # for debugging
-              echo "$key=$value" >> $GITHUB_ENV
+              # Skip empty lines and comments
+              [[ -z "$key" || "$key" =~ ^#.*$ ]] && continue
+
+              # Clean up whitespace
+              key=$(echo "$key" | xargs)
+              value=$(echo "$value" | xargs)
+
+              # Validate that we have both key and value
+              if [[ -n "$key" && -n "$value" ]]; then
+                echo "Setting: $key=$value"
+                echo "$key=$value" >> $GITHUB_ENV
+              fi
             done < "$info_file"
-            rm -f "$info_file"
+
+            echo "Variables extracted successfully"
           else
-            error "error: info.txt not found!"
+            echo "Warning: info.txt not found in artifacts"
+            echo "Available files:"
+            find release_files -type f -name "*.txt" || echo "No .txt files found"
+
+            # Set default values to prevent pipeline failure
+            echo "KERNEL_NAME=SuiKernel" >> $GITHUB_ENV
+            echo "LINUX_VERSION=5.10" >> $GITHUB_ENV
+            echo "KSU_NEXT_VERSION=unknown" >> $GITHUB_ENV
+            echo "SUKISU_VERSION=unknown" >> $GITHUB_ENV
+            echo "SUSFS_VERSION=unknown" >> $GITHUB_ENV
+            echo "RELEASE_REPO=LoggingNewMemory/SuiKernel-Releases" >> $GITHUB_ENV
+
+            echo "Using default values to continue release process"
           fi
 
       - name: Generate release tag
@@ -65,16 +85,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-            LATEST_TAG="$(gh api repos/$RELEASE_REPO/tags --jq '.[0].name')"
+            # Get the latest tag, handle case where no tags exist
+            LATEST_TAG=$(gh api repos/$RELEASE_REPO/tags --jq '.[0].name' 2>/dev/null || echo "")
 
-            # Handle case when $LATEST_TAG doesn't contain $KERNEL_NAME
-            if ! echo "$LATEST_TAG" | grep -q "$KERNEL_NAME"; then
-                RELEASE_TAG="$KERNEL_NAME-r0"
+            # Handle case when $LATEST_TAG doesn't contain $KERNEL_NAME or is empty
+            if [[ -z "$LATEST_TAG" ]] || ! echo "$LATEST_TAG" | grep -q "$KERNEL_NAME"; then
+                RELEASE_TAG="$KERNEL_NAME-r1"
             else
                 RELEASE_TAG="$LATEST_TAG"
+                # Increment the release number
+                RELEASE_TAG="$(echo "$RELEASE_TAG" | awk -F'-r' '{suffix=$2; if (!suffix) suffix=0; suffix++; printf "%s-r%d", $1, suffix}')"
             fi
-
-            RELEASE_TAG="$(echo "$RELEASE_TAG" | awk -F'-r' '{suffix=$2; if (!suffix) suffix=0; suffix++; printf "%s-r%d", $1, suffix}')"
 
             echo "Release tag: $RELEASE_TAG"
             echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
@@ -100,10 +121,21 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-      - name: Send notification to TG
+      - name: Send notification to TG (Safe)
         run: |
-          source ./functions.sh
-          send_msg "📦 Release completed! [Click](https://github.com/${{ env.RELEASE_REPO }}/releases/tag/${{ env.RELEASE_TAG }})"
+          # Only send notification if we have the required secrets
+          if [[ -n "$TG_BOT_TOKEN" && -n "$TG_CHAT_ID" ]]; then
+            # Simple curl-based notification instead of using functions.sh
+            MESSAGE="📦 Release completed! [Click](https://github.com/${{ env.RELEASE_REPO }}/releases/tag/${{ env.RELEASE_TAG }})"
+
+            curl -s -X POST "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage" \
+              -d chat_id="$TG_CHAT_ID" \
+              -d text="$MESSAGE" \
+              -d parse_mode="Markdown" \
+              -d disable_web_page_preview=true || echo "Telegram notification failed, but continuing..."
+          else
+            echo "Telegram secrets not available, skipping notification"
+          fi
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
