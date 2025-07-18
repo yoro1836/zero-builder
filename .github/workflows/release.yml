@@ -40,6 +40,9 @@ jobs:
           path: release_files
 
       - name: Extract variables from info.txt (Safe)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           # Find the info.txt file
           info_file=$(find release_files -name "info.txt" -type f | head -1)
@@ -66,16 +69,14 @@ jobs:
             echo "Variables extracted successfully"
           else
             echo "Warning: info.txt not found in artifacts"
-            echo "Available files:"
-            find release_files -type f -name "*.txt" || echo "No .txt files found"
 
             # Set default values to prevent pipeline failure
-            echo "KERNEL_NAME=SuiKernel" >> $GITHUB_ENV
-            echo "LINUX_VERSION=5.10" >> $GITHUB_ENV
-            echo "KSU_NEXT_VERSION=unknown" >> $GITHUB_ENV
-            echo "SUKISU_VERSION=unknown" >> $GITHUB_ENV
-            echo "SUSFS_VERSION=unknown" >> $GITHUB_ENV
-            echo "RELEASE_REPO=LoggingNewMemory/SuiKernel-Releases" >> $GITHUB_ENV
+            echo "KERNEL_NAME=QuartiX" >> $GITHUB_ENV
+            echo "LINUX_VERSION=$(curl -s https://raw.githubusercontent.com/aosp-mirror/kernel_common/refs/heads/android12-5.10-lts/Makefile | grep -E '^(VERSION|PATCHLEVEL|SUBLEVEL) ?=' | cut -d '=' -f2 | tr -d ' ' | paste -sd.)" >> $GITHUB_ENV
+            echo "KSU_NEXT_VERSION=$(gh api repos/KernelSU-Next/KernelSU-Next/tags --jq '.[0].name')" >> $GITHUB_ENV
+            echo "SUKISU_VERSION=$(gh api repos/SukiSU-Ultra/SukiSU-Ultra/tags --jq '.[0].name')" >> $GITHUB_ENV
+            echo "SUSFS_VERSION=$(curl -s https://gitlab.com/simonpunk/susfs4ksu/raw/gki-android12-5.10/kernel_patches/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/\"//g')" >> $GITHUB_ENV
+            echo "RELEASE_REPO=bintang774/quartix-releases" >> $GITHUB_ENV
 
             echo "Using default values to continue release process"
           fi
@@ -92,9 +93,7 @@ jobs:
             if [[ -z "$LATEST_TAG" ]] || ! echo "$LATEST_TAG" | grep -q "$KERNEL_NAME"; then
                 RELEASE_TAG="$KERNEL_NAME-r1"
             else
-                RELEASE_TAG="$LATEST_TAG"
-                # Increment the release number
-                RELEASE_TAG="$(echo "$RELEASE_TAG" | awk -F'-r' '{suffix=$2; if (!suffix) suffix=0; suffix++; printf "%s-r%d", $1, suffix}')"
+                RELEASE_TAG="$(echo "$LATEST_TAG" | awk -F'-r' '{suffix=$2; if (!suffix) suffix=0; suffix++; printf "%s-r%d", $1, suffix}')"
             fi
 
             echo "Release tag: $RELEASE_TAG"
@@ -123,19 +122,9 @@ jobs:
 
       - name: Send notification to TG (Safe)
         run: |
-          # Only send notification if we have the required secrets
-          if [[ -n "$TG_BOT_TOKEN" && -n "$TG_CHAT_ID" ]]; then
-            # Simple curl-based notification instead of using functions.sh
             MESSAGE="📦 Release completed! [Click](https://github.com/${{ env.RELEASE_REPO }}/releases/tag/${{ env.RELEASE_TAG }})"
-
-            curl -s -X POST "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage" \
-              -d chat_id="$TG_CHAT_ID" \
-              -d text="$MESSAGE" \
-              -d parse_mode="Markdown" \
-              -d disable_web_page_preview=true || echo "Telegram notification failed, but continuing..."
-          else
-            echo "Telegram secrets not available, skipping notification"
-          fi
+            source functions.sh
+            send_msg "$MESSAGE"
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
