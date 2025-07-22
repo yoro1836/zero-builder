@@ -40,10 +40,20 @@ ZIP_NAME=${ZIP_NAME//VARIANT/$VARIANT}
 CLANG_DIR="$workdir/clang"
 if [[ -z "$CLANG_BRANCH" ]]; then
   log "🔽 Downloading Clang..."
-  wget -qO tarball "$CLANG_URL"
+  wget -qO clang-archive "$CLANG_URL"
   mkdir -p "$CLANG_DIR"
-  tar -xf tarball -C "$CLANG_DIR"
-  rm tarball
+  case "$(basename $CLANG_URL)" in
+    *.tar.*)
+      tar -xf clang-archive -C "$CLANG_DIR"
+      ;;
+    *.7z)
+      7z x clang-archive -o${CLANG_DIR}/ -bd -y > /dev/null
+      ;;
+    *)
+      error "Unsupported file format"
+      ;;
+  esac
+  rm clang-archive
 
   if [[ $(find "$CLANG_DIR" -mindepth 1 -maxdepth 1 -type d | wc -l) -eq 1 ]] \
     && [[ $(find "$CLANG_DIR" -mindepth 1 -maxdepth 1 -type f | wc -l) -eq 0 ]]; then
@@ -150,7 +160,8 @@ MODULE_SYMVERS="$KSRC/out/Module.symvers"
 
 text=$(
   cat << EOF
-*==== Krenol CI ====*
+*$KERNEL_NAME CI*
+
 🐧 *Linux Version*: $LINUX_VERSION
 📅 *Build Date*: $KBUILD_BUILD_TIMESTAMP
 📛 *KernelSU*: ${KSU}$(ksu_included && echo " | $KSU_VERSION")

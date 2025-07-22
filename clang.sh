@@ -14,6 +14,8 @@ LILIUM_REPO="https://api.github.com/repos/liliumproject/clang/releases/latest"
 TNF_REPO="https://api.github.com/repos/topnotchfreaks/clang/releases/latest"
 # neutron clang
 NEUTRON_REPO="https://api.github.com/repos/Neutron-Toolchains/clang-build-catalogue/releases/latest"
+# mandi-sa
+#MANDISA_REPO=""
 
 show_usage() {
   CLANG_NAME="slim, rv, aosp, yuki, lilium, tnf, neutron"
@@ -21,28 +23,41 @@ show_usage() {
   echo "clang name: $CLANG_NAME"
 }
 
+# get_latest_clang <GH API URL> <GREP EXPR>
+# if no grep expr provided then will use .tar.gz as default
+get_latest_clang() {
+  local url="$1"
+  local grp_expr="$2"
+  [[ -z "$grp_expr" ]] && grp_expr=".tar.gz"
+  curl -s "$url" | grep "browser_download_url" | grep "$grp_expr" | cut -d '"' -f 4
+  return $?
+}
+
 case "$1" in
   "slim")
     curl -s "$SLIM_REPO" | grep -oP 'llvm-[\d.]+-x86_64\.tar\.xz' | sort -V | tail -n1 | sed "s|^|$SLIM_REPO|"
     ;;
   "rv")
-    curl -s "$RV_REPO" | grep "browser_download_url" | grep ".tar.gz" | cut -d '"' -f 4
+    get_latest_clang "$RV_REPO"
     ;;
   "aosp")
-    curl -s "$AOSP_REPO" | grep "browser_download_url" | grep ".tar.gz" | cut -d '"' -f 4
+    get_latest_clang "$AOSP_REPO"
     ;;
   "yuki")
-    curl -s "$YUKI_REPO" | grep "browser_download_url" | grep ".tar.gz" | cut -d '"' -f 4
+    get_latest_clang "$YUKI_CLANG"
     ;;
   "lilium")
-    curl -s "$LILIUM_REPO" | grep "browser_download_url" | grep ".tar.gz" | cut -d '"' -f 4
+    get_latest_clang "$LILIUM_REPO"
     ;;
   "tnf")
-    curl -s "$TNF_REPO" | grep "browser_download_url" | grep ".tar.gz" | cut -d '"' -f 4
+    get_latest_clang "$TNF_REPO"
     ;;
   "neutron")
-    curl -s "$NEUTRON_REPO" | grep "browser_download_url" | grep ".tar.zst" | cut -d '"' -f 4
+    get_latest_clang "$NEUTRON_REPO"
     ;;
+    #  "mandi-sa")
+    #    get_latest_clang "$MANDISA_REPO"
+    #    ;;
   *)
     if [[ -z $1 ]]; then
       show_usage
