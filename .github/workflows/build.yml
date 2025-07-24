@@ -118,6 +118,15 @@ jobs:
           sudo aptitude install -y libssl-dev
           pip install lxml
 
+      - name: Enable swap with high priority and swappiness
+        run: |
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile --priority 100
+          sudo sysctl vm.swappiness=100
+          free -h
+
       - name: Run Build Script
         env:
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }} # telegram chat id
