@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 
 # Kernel name
-KERNEL_NAME="QuartiX"
+KERNEL_NAME="Zero"
 # Kernel Build variables
-USER="eraselk"
-HOST="gacorprjkt"
-TIMEZONE="Asia/Makassar"
+USER="Yoro1836"
+HOST="AkoTheCow"
+TIMEZONE="Asia/Seoul"
 # AnyKernel
 ANYKERNEL_REPO="https://github.com/bintang774/anykernel"
 ANYKERNEL_BRANCH="gki"
 # Kernel Source
-KERNEL_REPO="https://github.com/bintang774/gki-android12-5.10"
-KERNEL_BRANCH="quartix/test"
-KERNEL_DEFCONFIG="gki_defconfig"
+KERNEL_REPO="https://github.com/yoro1836/zero_kernel"
+KERNEL_BRANCH="zero"
+KERNEL_DEFCONFIG="zero_defconfig"
 # Release repository
-GKI_RELEASES_REPO="https://github.com/bintang774/quartix-releases"
+GKI_RELEASES_REPO="https://github.com/yoro1836/zero_kernel"
 # Clang
-CLANG_URL="$(./clang.sh mandi-sa)"
+CLANG_URL="$(./clang.sh ndk)"
 CLANG_BRANCH=""
 # Zip name
 # Format: Kernel_name-Linux_version-Variant-Build_date
