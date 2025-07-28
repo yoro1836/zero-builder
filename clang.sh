@@ -16,9 +16,11 @@ TNF_REPO="https://api.github.com/repos/topnotchfreaks/clang/releases/latest"
 NEUTRON_REPO="https://api.github.com/repos/Neutron-Toolchains/clang-build-catalogue/releases/latest"
 # mandi-sa
 MANDISA_REPO="https://api.github.com/repos/Mandi-Sa/clang/releases/latest"
+# ndk r27c
+NDK_REPO="https://api.github.com/repos/yoro1836/NDK-r27c/releases/latest"
 
 show_usage() {
-  CLANG_NAME="slim, rv, aosp, yuki, lilium, tnf, neutron, mandi-sa"
+  CLANG_NAME="slim, rv, aosp, yuki, lilium, tnf, neutron, mandi-sa, ndk"
   echo "Usage: $0 <clang name>"
   echo "clang name: $CLANG_NAME"
 }
@@ -57,6 +59,9 @@ case "$1" in
     ;;
   "mandi-sa")
     get_latest_clang "$MANDISA_REPO" ".7z" | tac | head -n1
+    ;;
+  "ndk")
+    get_latest_clang "$NDK_REPO"
     ;;
   *)
     if [[ -z $1 ]]; then
