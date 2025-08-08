@@ -9,10 +9,10 @@ jobs:
       matrix:
         variant:
           - { name: "Non-KSU", KSU: "None", KSU_SUSFS: "false", KSU_MANUAL_HOOK: "false", LAST_BUILD: "false" }
-          - { name: "KSUN-Only", KSU: "Next", KSU_SUSFS: "false", KSU_MANUAL_HOOK: "true", LAST_BUILD: "false" }
-          - { name: "KSUN+SuSFS", KSU: "Next", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "true", LAST_BUILD: "false" }
-          - { name: "SUKISU-Only", KSU: "Suki", KSU_SUSFS: "false", KSU_MANUAL_HOOK: "true", LAST_BUILD: "false" }
-          - { name: "SUKISU+SuSFS", KSU: "Suki", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "true", LAST_BUILD: "true" }
+          - { name: "KSUN-Only", KSU: "Next", KSU_SUSFS: "false", KSU_MANUAL_HOOK: "false", LAST_BUILD: "false" }
+          - { name: "KSUN+SuSFS", KSU: "Next", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "false", LAST_BUILD: "false" }
+          - { name: "SUKISU-Only", KSU: "Suki", KSU_SUSFS: "false", KSU_MANUAL_HOOK: "false", LAST_BUILD: "false" }
+          - { name: "SUKISU+SuSFS", KSU: "Suki", KSU_SUSFS: "true", KSU_MANUAL_HOOK: "false", LAST_BUILD: "true" }
     name: Build ${{ matrix.variant.name }} variant
     uses: ./.github/workflows/build.yml
     secrets: inherit
