@@ -7,7 +7,7 @@ USER="Yoro1836"
 HOST="AkoTheCow"
 TIMEZONE="Asia/Seoul"
 # AnyKernel
-ANYKERNEL_REPO="https://github.com/bintang774/anykernel"
+ANYKERNEL_REPO="https://github.com/yoro1836/zero-anykernel"
 ANYKERNEL_BRANCH="gki"
 # Kernel Source
 KERNEL_REPO="https://github.com/yoro1836/zero_kernel"
